@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><title>JM NEWS — Editor</title>
+<style>
+:root{--bg:#EEF1F6;--pn:#fff;--tx:#0A0A0A;--mu:#555;--bd:#C9D1DE;--navy:#0B2A5B;--red:#C81E1E;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E131C;--pn:#161D2A;--tx:#F1F4FA;--mu:#A9B4C8;--bd:#2C384D;--navy:#7FA3E6}}
+:root[data-theme="dark"]{--bg:#0E131C;--pn:#161D2A;--tx:#F1F4FA;--mu:#A9B4C8;--bd:#2C384D;--navy:#7FA3E6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,Arial,sans-serif}
+header{background:#0B2A5B;color:#fff;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+header b{letter-spacing:2px;font-size:20px}main{max-width:1200px;margin:0 auto;padding:20px}
+button{font:inherit;min-height:44px;padding:0 16px;border:2px solid var(--navy);background:transparent;color:var(--navy);font-weight:700;cursor:pointer}
+button.p{background:#0B2A5B;color:#fff;border-color:#0B2A5B}button.d{border-color:var(--red);color:var(--red)}header button{border-color:#fff;color:#fff}
+.g{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:20px}@media(max-width:760px){.g{grid-template-columns:1fr}}
+.pn{background:var(--pn);border:1px solid var(--bd);padding:16px}
+.it{display:block;width:100%;text-align:left;margin-top:8px;padding:10px;font-weight:600;color:var(--tx);border-color:var(--bd)}.it.on{border-color:var(--navy);box-shadow:inset 4px 0 0 var(--red)}.it small{display:block;font-weight:400;color:var(--mu)}
+label{display:block;font-weight:700;margin:14px 0 4px;font-size:14px}
+input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);min-height:44px}textarea{min-height:240px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.msg{font-size:13px;color:var(--mu);margin-top:8px}
+.img{max-width:420px;width:100%;aspect-ratio:16/9;object-fit:cover;display:block;margin-top:8px;background:var(--bd)}
+.box{max-width:380px;margin:60px auto}
+</style></head><body>
+<header><b>JM NEWS · EDITOR</b><div id="top"></div></header>
+<main id="app"></main>
+<script>
+var CATS=["Medianeira","Oeste do Paraná","Paraná","Brasil","Mundo","Política","Economia","Segurança pública","Educação","Saúde","Esportes","Futebol","Entretenimento","Tecnologia"];
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+var T=sessionStorage.getItem("jmn.t")||"",L=[],cur=null,note="",dirty=false;
+function api(p,o){o=o||{};o.headers=Object.assign({Authorization:"Bearer "+T},o.headers||{});return fetch("/api/"+p,o).then(function(r){if(r.status===401&&p!=="login"){logout();throw new Error("Sessão expirada. Entre novamente.")}return r.json().then(function(j){if(!r.ok)throw new Error(j.error||"Erro");return j})})}
+function logout(){T="";sessionStorage.removeItem("jmn.t");render()}
+function byDate(a,b){return a.d<b.d?1:-1}
+function loginView(){$("top").innerHTML="";$("app").innerHTML='<div class="pn box"><h1 style="margin-top:0;font-size:22px">Entrar</h1><label for="pw">Senha do administrador</label><input id="pw" type="password" autocomplete="current-password"><div class="row"><button class="p" id="go">Entrar</button></div><p class="msg" id="st" role="status">'+esc(note)+'</p></div>';
+function go(){note="Entrando…";$("st").textContent=note;fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:$("pw").value})}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||"Erro");return j})}).then(function(j){T=j.token;sessionStorage.setItem("jmn.t",T);note="";load()}).catch(function(e){note=e.message;$("st").textContent=note})}
+$("go").onclick=go;$("pw").onkeydown=function(e){if(e.key==="Enter")go()}}
+function load(){api("all").then(function(d){L=d;cur=L.length?L.slice().sort(byDate)[0].id:null;dirty=false;render()}).catch(function(e){note=e.message;render()})}
+function find(){return L.filter(function(a){return a.id===cur})[0]}
+function editView(){$("top").innerHTML='<button id="save" class="p" style="border-color:#fff">Salvar tudo</button> <button id="out">Sair</button>';
+var items=L.slice().sort(byDate).map(function(a){return'<button class="it'+(a.id===cur?" on":"")+'" data-id="'+esc(a.id)+'">'+esc(a.t||"(sem título)")+'<small>'+esc(a.c)+' · '+(a.st==="publicado"?"Publicado":"Rascunho")+'</small></button>'}).join("");
+var a=find();
+$("app").innerHTML='<div class="g"><div class="pn"><button class="p" id="new" style="width:100%">+ Nova matéria</button>'+(L.length?"":'<button id="seed" style="width:100%;margin-top:8px">Carregar matérias iniciais</button>')+items+'</div><div class="pn">'+(a?'<label for="f_t" style="margin-top:0">Título</label><input id="f_t" maxlength="200"><label for="f_s">Subtítulo</label><input id="f_s" maxlength="300"><label for="f_c">Categoria</label><select id="f_c">'+CATS.map(function(c){return"<option>"+esc(c)+"</option>"}).join("")+'</select><label for="f_b">Texto (parágrafos separados por linha em branco)</label><textarea id="f_b"></textarea><label for="f_f">Fonte (nome)</label><input id="f_f" maxlength="200"><label for="f_l">Link da fonte</label><input id="f_l" placeholder="https://"><label for="f_i">Imagem de capa</label><input id="f_i" type="file" accept="image/*"><img id="pv" class="img" alt="Prévia" hidden><button id="rm" hidden style="margin-top:8px">Remover imagem</button><label for="f_k">Crédito da imagem</label><input id="f_k" maxlength="200"><p class="msg">Use só imagens suas, licenciadas ou com uso autorizado.</p><label for="f_st">Estado</label><select id="f_st"><option value="rascunho">Rascunho</option><option value="publicado">Publicado</option></select><div class="row"><button class="d" id="del">Excluir</button></div>':'<p>Selecione ou crie uma matéria.</p>')+'<p class="msg" id="st" role="status">'+esc(note)+(dirty?" Há alterações não salvas.":"")+'</p></div></div>';
+if(a){$("f_t").value=a.t;$("f_s").value=a.s;$("f_c").value=a.c;$("f_b").value=a.b;$("f_f").value=a.f;$("f_l").value=a.l;$("f_k").value=a.k;$("f_st").value=a.st;pv(a.i);
+["f_t","f_s","f_c","f_b","f_f","f_l","f_k","f_st"].forEach(function(id){$(id).onchange=$(id).oninput=sync});
+$("f_i").onchange=pickImg;$("rm").onclick=function(){var x=find();x.i="";dirty=true;pv("")};$("del").onclick=function(){if(!confirm("Excluir esta matéria? Salve para confirmar."))return;L=L.filter(function(z){return z.id!==cur});cur=L.length?L[0].id:null;dirty=true;render()}}
+$("out").onclick=logout;$("save").onclick=saveAll;$("new").onclick=function(){var n={id:"n"+Date.now(),t:"",s:"",c:CATS[0],b:"",f:"",l:"",i:"",k:"",st:"rascunho",d:new Date().toISOString().slice(0,19)};L.push(n);cur=n.id;dirty=true;render()};
+if($("seed"))$("seed").onclick=function(){fetch("/seed.json").then(function(r){return r.json()}).then(function(d){L=d;cur=L.slice().sort(byDate)[0].id;dirty=true;render()})};
+document.querySelectorAll(".it").forEach(function(b){b.onclick=function(){cur=b.dataset.id;note="";render()}})}
+function pv(u){var p=$("pv"),r=$("rm");if(!p)return;p.hidden=!u;r.hidden=!u;if(u)p.src=u}
+function sync(){var a=find();if(!a)return;a.t=$("f_t").value;a.s=$("f_s").value;a.c=$("f_c").value;a.b=$("f_b").value;a.f=$("f_f").value;a.l=$("f_l").value;a.k=$("f_k").value;a.st=$("f_st").value;dirty=true}
+function pickImg(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var k=Math.min(1,1200/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);var u=c.toDataURL("image/jpeg",.82);find().i=u;dirty=true;pv(u)};im.onerror=function(){$("st").textContent="Arquivo de imagem inválido."};im.src=r.result};r.readAsDataURL(f)}
+async function saveAll(){var s=$("st");sync2();for(var a of L){if(a.st==="publicado"&&!(a.b||"").trim()){note='"'+(a.t||"sem título")+'": escreva o texto para publicar.';render();return}if(!(a.t||"").trim()){note="Há matéria sem título.";render();return}}
+note="Salvando…";s.textContent=note;try{for(var a2 of L){if((a2.i||"").indexOf("data:")===0){var b=await (await fetch(a2.i)).blob();var j=await api("img",{method:"POST",headers:{"content-type":"image/jpeg"},body:b});a2.i=j.url}}
+await api("save",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(L)});dirty=false;note="Salvo e publicado às "+new Date().toLocaleTimeString("pt-BR")+".";render()}catch(e){note=e.message;render()}}
+function sync2(){if($("f_t"))sync()}
+function render(){if(!T)loginView();else editView()}
+window.onbeforeunload=function(){return dirty?"Há alterações não salvas.":undefined};
+if(T)load();else render();
+</script></body></html>
